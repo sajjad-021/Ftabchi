@@ -5,11 +5,7 @@
 <h6>(Inter line by line in terminal)</h6>
 <pre>
 <span>cd $HOME</span>
-<span>git clone https://github.com/i-Naji/Ftabchi.git</span>
-<span>cd Ftabchi</span>
-<span>chmod +x launch.sh</span>
-<span>chmod +x steady.sh</span>
-<span>./launch.sh install</span>
+```git clone https://github.com/sajjad-021/Ftabchi/.git; cd Ftabchi; chmod +x launch.sh; chmod +x steady.sh; ./launch.sh install; ./launch.sh 1```
 </pre>
 <h4> <strong>After installing  the prerequisites,<br>Input your id in bot.lua (line 4),then launch the bot by using of ID (is a number): </strong>
 <pre>
