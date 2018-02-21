@@ -1,7 +1,7 @@
 redis = (loadfile "./redis.lua")()
 redis = redis.connect('127.0.0.1', 6379)
 redis:select(0)
-ADMIN =   198555147--yourid
+ADMIN = 180191663--yourid
 
 function ok_cb(extra, success, result)
 end
@@ -50,14 +50,6 @@ function rem(msg)
 	end
 end
 
-function writefile(filename, input)
-	local file = io.open(filename, "w")
-	file:write(input)
-	file:flush()
-	file:close()
-	return true
-end
-
 function backward_msg_format(msg)
   for k,name in pairs({'from', 'to'}) do
     local longid = msg[name].id
@@ -73,48 +65,6 @@ function backward_msg_format(msg)
     user.type = user.peer_type
   end
   return msg
-end
-
-function set_bot_photo(receiver, success, result)
-	if success then
-		local file = 'botBOT-ID.jpg'
-		os.rename(result, file)
-		set_profile_photo(file, ok_cb, false)
-		send_msg(receiver, 'Photo changed!', ok_cb, false)
-	else
-		send_msg(receiver, 'Failed, please try again!', ok_cb, false)
-	end
-end
-
-function add_all_members(extra, success, result)
-	local receiver = extra.receiver
-    for k,v in pairs(result) do
-		if v.id then
-			channel_invite(receiver,"user#id"..v.id,ok_cb,false)
-		end
-	end
-	local users = redis:smembers("selfbotBOT-IDusers")
-	for i=1, #users do
-		channel_invite(receiver,users[i],ok_cb,false)
-    end
-	send_msg(receiver, "All Contacts Invited To Group", ok_cb, false)
-end
-
-function check_contacts(cb_extra, success, result)
-	local i = 0
-	for k,v in pairs(result) do
-		i = i+1
-	end
-	redis:set("selfbotBOT-IDcontacts",i)
-end
-
-function get_contacts(cb_extra, success, result)
-	local text = " "
-	for k,v in pairs(result) do
-		text = text..string.gsub(v.print_name ,  "_" , " ").." ["..v.peer_id.."] = "..v.phone.."\n\n"
-	end
-	writefile("contact_list.txt", text)
-	send_document(cb_extra.target,"contact_list.txt", ok_cb, false)
 end
 
 function find_link(text)
@@ -151,9 +101,7 @@ function on_msg_receive (msg)
 		end
 		if is_Naji(msg.from.id) then
 			find_link(text)
-			if text:match("^(!setphoto)$") and msg.reply_id then
-				load_photo(msg.reply_id, set_bot_photo, receiver)
-			elseif text:match("^(!markread) (.*)$") then
+			if text:match("^(!markread) (.*)$") then
 				local matche = text:match("^!markread (.*)$")
 				if matche == "on" then
 					redis:set("selfbotBOT-IDmarkread", "on")
@@ -245,7 +193,7 @@ function on_msg_receive (msg)
 "دانش بدون تکامل اخلاقی خطرناک و نابود کننده است."
 ➖➖➖➖ا➖➖➖➖]]
 				send_msg(receiver, text, ok_cb, false)
-			elseif text:match("^(!status)$") then
+			elseif text:match("^(info)$") then
 				local join = redis:get("selfbotBOT-IDlink") and "✅" or "⛔️"
 				local add = redis:get("selfbotBOT-IDaddcontact") and "✅" or "⛔️"
 				local msg =  redis:get("selfbotBOT-IDaddcontactpm") and "✅" or "⛔️"
@@ -253,8 +201,8 @@ function on_msg_receive (msg)
 				local view = redis:get("selfbotBOT-IDmarkread") and "✅" or "⛔️"
 				local text = "⚜️AutoJoin : "..join.."\n👁‍🗨ReadMark : "..view.."\n🔰AutoAdd Sheared Contact : "..add.."\n🌟Sending Message for Sheared Contact : "..msg.."\n📨Sheared Contact Msg: 📍"..txt.." 📍"
 				send_msg(receiver, text, ok_cb, false)
-			elseif text:match("^(!autojoin) (.*)$") then
-				local matche = text:match("^!autojoin (.*)$")
+			elseif text:match("^(join) (.*)$") then
+				local matche = text:match("^join (.*)$")
 				if matche == "on" then
 					redis:set("selfbotBOT-IDlink", true)
 					send_msg(receiver, "Automatic joining is ON", ok_cb, false)
@@ -262,93 +210,7 @@ function on_msg_receive (msg)
 					redis:del("selfbotBOT-IDlink")
 					send_msg(receiver, "Automatic joining is OFF", ok_cb, false)
 				end
-			elseif text:match("^(!addcontact) (.*)$") then
-				local matche = text:match("^!addcontact (.*)$")
-				if matche == "on" then
-					redis:set("selfbotBOT-IDaddcontact", true)
-					send_msg(receiver, "Adding sheared contacts is ON", ok_cb, false)
-				elseif matche == "off" then
-					redis:del("selfbotBOT-IDaddcontact")
-					send_msg(receiver, "Adding sheared contacts is OFF", ok_cb, false)
-				end
-			elseif text:match("^(!addcontactpm) (.*)$") then
-				local matche = text:match("^!addcontactpm (.*)$")
-				if matche == "on" then
-					redis:set("selfbotBOT-IDaddcontactpm", true)
-					send_msg(receiver, "Sending msg for contacts is ON", ok_cb, false)
-				elseif matche == "off" then
-					redis:del("selfbotBOT-IDaddcontactpm")
-					send_msg(receiver, "Sending msg for sheared contacts is OFF", ok_cb, false)
-				end
-			elseif text:match("^(!block) (.*)$") then
-				local matche = text:match("^!block (.*)$")
-				block_user("user#id"..matche,ok_cb,false)
-				send_msg(receiver, "User blocked", ok_cb, false)
-			elseif text:match("^(!unblock) (.*)$") then
-				local matche = text:match("^!unblock (.*)$")
-				unblock_user("user#id"..matche,ok_cb,false)
-				send_msg(receiver, "User unblock", ok_cb, false)
-			elseif text:match("^(!delcontact) (.*)$") then
-				local matche = text:match("^!delcontact (.*)$")
-				del_contact("user#id"..matche,ok_cb,false)
-				send_msg(receiver, "User "..matche.." removed from contact list", ok_cb, false)
-			elseif text:match("^(!addcontact) (.*) (.*) (.*)$") then
-				local matches = {text:match("^(!addcontact) (.*) (.*) (.*)$")}
-				add_contact(matches[2], matches[3], matches[4], ok_cb, false)
-				send_msg(receiver, "User With Phone +"..matches[2].." has been added", ok_cb, false)
-			elseif text:match("^(!sendcontact) (.*) (.*) (.*)$") then
-				local matches = {text:match("^(!sendcontact) (.*) (.*) (.*)$")}
-				send_contact(receiver,matches[2], matches[3], matches[4], ok_cb, false)
-			elseif text:match("^(!exportlink)$") then
-				links = redis:smembers("selfbotBOT-IDlinks")
-				local text = "Group Links :\n"
-				for i=1,#links do
-					if string.len(links[i]) ~= 51 then
-						redis:srem("selfbotBOT-IDlinks",links[i])
-					else
-						text = text..links[i].."\n"
-					end
-				end
-				writefile("group_links.txt", text)
-				send_document(receiver,"group_links.txt",ok_cb,false)
-			elseif text:match("^(!contactlist)$") then
-				get_contact_list(get_contacts, {target = receiver})
-			elseif (text:match("^(!addmember)$") and msg.to.type == "channel") then
-				get_contact_list(add_all_members, {receiver=receiver})
-			elseif text:match("^(!stats)$") then
-				get_contact_list(check_contacts, false)
-				local usrs = redis:scard("selfbotBOT-IDusers")
-				local gps = redis:scard("selfbotBOT-IDgroups")
-				local sgps = redis:scard("selfbotBOT-IDsupergroups")
-				local links = redis:scard("selfbotBOT-IDlinks")
-				local con = redis:get("selfbotBOT-IDcontacts") or "مشخص نشده"
-				local text = "<b>👤 Users </b>: "..usrs.."\n<b>👥 Groups </b>: "..gps.."\n<b>🌐 SuperGroups </b>: "..sgps.."\n<b>📁 Total Saved Links </b>: "..links.."\n<b>💠 Total Saved Contacts </b>: "..con
-				send_msg(receiver, text, ok_cb, false)
-			elseif text:match("^(!bc)(.*) (.*)") then
-				local matches = {text:match("^!bc(.*) (.*)$")} 
-				local naji = ""
-				if matches[1] == "all" then
-					local list = {redis:smembers("selfbotBOT-IDgroups"),redis:smembers("selfbotBOT-IDsupergroups"),redis:smembers("selfbotBOT-IDusers")}
-					for x,y in pairs(list) do
-						for i,v in pairs(y) do
-							send_msg(v,matches[2],ok_cb,false)
-						end
-					end
-					return send_msg(receiver, "Sended!", ok_cb, false)
-				elseif matches[1] == "pv" then
-					naji = "selfbotBOT-IDusers"
-				elseif matches[1] == "gp" then
-					naji = "selfbotBOT-IDgroups"
-				elseif matches[1] == "sgp" then
-					naji = "selfbotBOT-IDsupergroups"
-				else 
-					return false
-				end
-				local list = redis:smembers(naji)
-				for i=1, #list do
-					send_msg(list[i],matches[2],ok_cb,false)
-				end
-				return send_msg(receiver, "Sended!", ok_cb, false)
+			
 			elseif (text:match("^(!fwd)(.*)$") and msg.reply_id) then
 				local matche = text:match("^!fwd(.*)$")
 				local naji = ""
